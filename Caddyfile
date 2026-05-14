@@ -1,0 +1,67 @@
+{
+	acme_dns alidns {
+		access_key_id "{$ALI_DNS_ACCESS_KEY}"
+		access_key_secret "{$ALI_DNS_SECRET_KEY}"
+	}
+}
+
+(security) {
+	header {
+		Server "Caddy"
+		X-Powered-By ""
+		X-Content-Type-Options nosniff
+		X-XSS-Protection "1; mode=block"
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+}
+
+push.yourdomain.com:8443 {
+	import security
+	reverse_proxy wecom-push:3000 {
+		header_up X-Real-IP {remote_host}
+	}
+	log {
+		output file /data/logs/push.log {
+			roll_size 10mb
+			roll_keep 5
+		}
+	}
+}
+
+seafile.yourdomain.com:8443 {
+	import security
+	request_body {
+		max_size 10GB
+	}
+	reverse_proxy seafile:80 {
+		header_up X-Real-IP {remote_host}
+		header_up Host {host}
+		transport http {
+			read_timeout 300s
+			write_timeout 300s
+		}
+	}
+	log {
+		output file /data/logs/seafile.log {
+			roll_size 10mb
+			roll_keep 5
+		}
+	}
+}
+
+# Home Assistant - MUST use versions 1.1 for WebSocket compatibility
+ha.yourdomain.com:8443 {
+	import security
+	reverse_proxy /* host.docker.internal:8123 {
+		header_up X-Real-IP {remote_host}
+		transport http {
+			versions 1.1
+		}
+	}
+	log {
+		output file /data/logs/ha.log {
+			roll_size 10mb
+			roll_keep 5
+		}
+	}
+}
